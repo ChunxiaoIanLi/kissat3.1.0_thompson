@@ -40,6 +40,11 @@ kissat *kissat_init (void) {
 #ifndef NDEBUG
   kissat_init_checker (solver);
 #endif
+  //sw_ucb
+  solver->window_sz = 30;
+  solver->window = (struct window *)malloc(sizeof(struct window));
+  init_window(solver->window, solver->window_sz);
+  solver->ucb_c = 0.2;
   return solver;
 }
 

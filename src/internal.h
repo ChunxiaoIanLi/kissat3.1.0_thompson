@@ -32,6 +32,8 @@
 #include "vector.h"
 #include "watch.h"
 
+#include "ucb.h"
+
 typedef struct datarank datarank;
 
 struct datarank {
@@ -84,6 +86,11 @@ struct kissat {
   int resetTotalTimes;
   int nof_restarts;
   int nof_resets;
+  // sw_ucb
+  int window_sz;
+  struct window *window;
+  double ucb_c;
+
 #if !defined(NDEBUG) || defined(METRICS)
   bool backbone_computing;
 #endif

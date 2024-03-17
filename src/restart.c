@@ -13,6 +13,7 @@
 #include <math.h>
 #include <time.h>
 #include "Thompson.hpp"
+#include "ucb.h"
 
 bool kissat_restarting (kissat *solver) {
   assert (solver->unassigned);
@@ -83,43 +84,95 @@ void kissat_restart (kissat *solver) {
     //printf("local learning rate: %0.2f\n", localLearningRate);
     //printf("learning rateEMB: %0.2f\n\n", solver->learningRateEMA);
     //update success and failures
-    if (solver-> resetTotalTimes != 0){
-      if (localLearningRate >= solver->learningRateEMA){
-          if (solver->resetPrevLever == 0){
-            solver->reset_wins++;
-          }
-          else{
-            solver->restart_wins++;
-          }
+    // if (solver-> resetTotalTimes != 0){
+    //   if (localLearningRate >= solver->learningRateEMA){
+    //       if (solver->resetPrevLever == 0){
+    //         solver->reset_wins++;
+    //       }
+    //       else{
+    //         solver->restart_wins++;
+    //       }
+    //   }
+    //   else{
+    //     if (solver->resetPrevLever == 0){
+    //       solver->reset_loses++;
+    //     }
+    //     else{
+    //       solver->restart_loses++;
+    //     }
+    //   }
+    // }
+    // //update LLR-MAB
+    // solver-> learningRateEMA *= solver-> resetDecay;
+    // solver->learningRateEMA += localLearningRate * (1.0 - solver->resetDecay);
+
+    //create a struct record
+    struct record pre_record = {solver->resetPrevLever, localLearningRate};
+    //sw_ucb: add record to solver->window
+    add_record(solver->window, pre_record);
+    // printf("select level: %d with local learning rate: %0.2f\n\n", solver->resetPrevLever, localLearningRate);
+
+    unsigned int reset_count = 0;
+    unsigned int restart_count = 0;
+    double x_sum_reset = 0;
+    double x_sum_restart = 0;
+    unsigned int w_size = 0; // number of records in solver->window
+   // w_size = solver->window->counts if solver->window->counts < solver->window_sz else solver->window_sz;
+    if (solver->window->counts < solver->window_sz){
+      w_size = solver->window->counts;
+    }
+    else{
+      w_size = solver->window_sz;
+    }
+    for (int i = 0; i < w_size; i++){
+      if (solver->window->records[i].bandit == 0){
+        reset_count++;
+        x_sum_reset += solver->window->records[i].reward;
       }
       else{
-        if (solver->resetPrevLever == 0){
-          solver->reset_loses++;
-        }
-        else{
-          solver->restart_loses++;
-        }
+        restart_count++;
+        x_sum_restart += solver->window->records[i].reward;
       }
     }
-    //update LLR-MAB
-    solver-> learningRateEMA *= solver-> resetDecay;
-    solver->learningRateEMA += localLearningRate * (1.0 - solver->resetDecay);
-
+    if (restart_count == 0){
+      solver->resetPrevLever = 1;
+    } 
+    else if (reset_count == 0){
+      solver->resetPrevLever = 0;
+    }
+    else{
+      double x_bar_reset = x_sum_reset / reset_count;
+      double x_bar_restart = x_sum_restart / restart_count;
+      double exp_reset = sqrt(2 * log(w_size) / reset_count) * solver->ucb_c;
+      double exp_restart = sqrt(2 * log(w_size) / restart_count) * solver->ucb_c;
+      double ucb_reset = x_bar_reset + exp_reset;
+      double ucb_restart = x_bar_restart + exp_restart;
+      if (ucb_reset > ucb_restart){
+        solver->resetPrevLever = 0;
+      }
+      else{
+        solver->resetPrevLever = 1;
+      }
+      // printf("Reset: Q: %f, EXP: %f(%d/%d), UCB: %f\n", x_bar_reset, exp_reset, reset_count, w_size, ucb_reset);
+      // printf("Restart: Q: %f, EXP: %f(%d/%d), UCB: %f\n", x_bar_restart, exp_restart, restart_count, w_size, ucb_restart);
+    }
     // printf("reset_wins: %0.2f\n", solver->reset_wins);
     // printf("reset_loses: %0.2f\n", solver->reset_loses);
     // printf("restart_wins: %0.2f\n", solver->restart_wins);
     // printf("restart_loses: %0.2f\n", solver->restart_loses);
     //select a lever
-    solver->resetPrevLever = select_lever(solver->reset_wins, solver->reset_loses, solver->restart_wins, solver->restart_loses);
-    solver->resetTotalTimes++;
-    if (solver->resetPrevLever == 0){
-      solver->reset_wins *= solver->resetDecay;
-      solver->reset_loses *= solver->resetDecay;
-    }
-    else{
-      solver->restart_wins *= solver->resetDecay;
-      solver->restart_loses *= solver->resetDecay;
-    }
+    // solver->resetPrevLever = select_lever(solver->reset_wins, solver->reset_loses, solver->restart_wins, solver->restart_loses);
+    // solver->resetTotalTimes++;
+    // if (solver->resetPrevLever == 0){
+    //   solver->reset_wins *= solver->resetDecay;
+    //   solver->reset_loses *= solver->resetDecay;
+    // }
+    // else{
+    //   solver->restart_wins *= solver->resetDecay;
+    //   solver->restart_loses *= solver->resetDecay;
+    // }
+
+
     if (solver->resetPrevLever == 0) {
       //reset activities
       for (all_variables(idx)) {
