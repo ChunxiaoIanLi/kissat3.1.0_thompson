@@ -12,7 +12,7 @@
 #include <inttypes.h>
 #include <math.h>
 #include <time.h>
-#include "Thompson.hpp"
+// #include "Thompson.hpp"
 #include "ucb.h"
 
 bool kissat_restarting (kissat *solver) {

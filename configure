@@ -292,7 +292,6 @@ do
   shift
 done
 
-g++ -std=c++11 -c src/Thompson.cpp
 
 dir="`pwd|sed -e 's,.*/,,'`"
 
@@ -317,7 +316,6 @@ else
   msg "new build directory '$BUILD'"
 fi
 
-mv Thompson.o "$BUILD"/.
 cd "$BUILD" || exit 1
 
 BUILD="`pwd`"

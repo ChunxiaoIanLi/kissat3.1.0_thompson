@@ -46,7 +46,7 @@ format:
 	clang-format -i ../*/*.[ch]
 
 kissat: main.o $(APPOBJ) libkissat.a makefile
-	$(LD) -o $@ main.o Thompson.o $(APPOBJ) $(LIBS) -lm -L. -lkissat -lstdc++
+	$(LD) -o $@ main.o $(APPOBJ) $(LIBS) -lm -L. -lkissat -lstdc++
 
 tissat: test.o $(TSTOBJ) libkissat.a makefile
 	$(LD) -o $@ test.o $(TSTOBJ) $(LIBS) -lm
